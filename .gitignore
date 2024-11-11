@@ -2,3 +2,6 @@
 bp_training/__pycache__/
 
 lightning_logs/
+
+mlruns/
+ml-runs/

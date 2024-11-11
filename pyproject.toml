@@ -14,6 +14,7 @@ torch = {version = "^2.5.0+cpu", source = "pytorch_cpu"}
 evaluate = "^0.4.3"
 pytorch-lightning = "^2.4.0"
 seqeval = "^1.2.2"
+python-dotenv = "^1.0.1"
 
 [tool.poetry.group.dev.dependencies]
 jupyterlab = "^4.2.5"

@@ -1,4 +1,6 @@
+import os
 import pytorch_lightning as pl
+import mlflow
 from transformers import (
     AdamW,
     AutoConfig,
@@ -9,6 +11,11 @@ from typing import Optional, List
 from collections import defaultdict
 import torch
 import numpy as np
+from bp_training.data import NERData
+from dotenv import load_dotenv
+
+load_dotenv()
+pl.seed_everything(42)
 
 
 class NERTrainer(pl.LightningModule):
@@ -54,6 +61,7 @@ class NERTrainer(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         outputs = self(**batch)
         val_loss = outputs.loss
+        self.logger.experiment
         outs = {
             "val_loss": val_loss,
             "predictions": outputs.logits,
@@ -105,10 +113,6 @@ class NERTrainer(pl.LightningModule):
         return optimiser
 
 
-pl.seed_everything(42)
-
-from bp_training.data import NERData
-
 dm = NERData()
 
 model = NERTrainer(
@@ -119,5 +123,20 @@ model = NERTrainer(
     task_name="ner",
 )
 
-trainer = pl.Trainer(max_epochs=1, accelerator="auto", devices=1, log_every_n_steps=1)
-trainer.fit(model, datamodule=dm)
+mlf_logger = pl.loggers.MLFlowLogger(experiment_name="ner", run_name="test")
+
+trainer = pl.Trainer(
+    max_epochs=1, accelerator="auto", devices=1, log_every_n_steps=1, logger=mlf_logger
+)
+
+mlflow.pytorch.autolog()
+
+with mlflow.start_run(log_system_metrics=True, run_name="finetune_test") as run:
+    mlflow_logger = pl.loggers.MLFlowLogger(
+        tracking_uri=os.getenv("MLFLOW_TRACKING_URI"),
+        experiment_name="NER",
+        log_model=False,
+        run_id=run.info.run_id,
+    )
+
+    trainer.fit(model, datamodule=dm)
