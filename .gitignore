@@ -12,3 +12,5 @@ mlartifacts/
 
 
 *.ckpt
+
+bp_training/util/__pycache__/

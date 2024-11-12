@@ -3,9 +3,11 @@ Entrypoint - currently set up to run a named entity recognition
 data module through a token classification trainer
 """
 
-from weakref import proxy
-
+import os
+from typing import Optional
 import mlflow
+import mlflow.runs
+from mlflow.entities.experiment import Experiment
 from pytorch_lightning import Trainer, seed_everything
 from pytorch_lightning.loggers import MLFlowLogger
 from dotenv import load_dotenv
@@ -24,28 +26,42 @@ if __name__ == "__main__":
     EXPERIMENT_NAME = "NER Test"
     RUN_NAME = "finetune_test"
     MLFLOW_TRACKING_URI = "http://localhost:5000"
+    MLFLOW_ARTIFACTS_DESTINATION = "mlartifacts"
 
     mlflow.set_experiment(EXPERIMENT_NAME)
     # mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
 
-    # resume_run = "finetune_test"
-    # experiment = mlflow.get_experiment_by_name("NER Test")
-    # experiment.artifact_location
-    # mlflow.get_registry_uri()
+    def get_latest_artifact():
+        experiment: Optional[Experiment] = mlflow.get_experiment_by_name("NER Test")
+        runs = mlflow.search_runs([experiment.experiment_id])
+        latest_run = runs.sort_values("end_time").iloc[-1]
+        artifact_path = os.path.join(
+            MLFLOW_ARTIFACTS_DESTINATION,
+            latest_run["artifact_uri"].split(":/")[-1],
+            latest_run["tags.mlflow.latest_checkpoint_artifact"],
+        )
+        return artifact_path
 
     data_module = NERData()
 
-    model = TokenClassificationModel(
-        model_name_or_path="google-bert/bert-base-cased",
-        num_labels=len(data_module.label_list),
-    )
+    resume = True
 
-    lightning_module = TokenClassificationTrainer(
-        model=model(),
-        label_list=data_module.label_list,
-        eval_splits=["validation", "test"],
-        task_name="ner",
-    )
+    if resume:
+        checkpoint = get_latest_artifact()
+        lightning_module = TokenClassificationTrainer.load_from_checkpoint(checkpoint)
+    else:
+
+        model = TokenClassificationModel(
+            model_name_or_path="google-bert/bert-base-cased",
+            num_labels=len(data_module.label_list),
+        )
+
+        lightning_module = TokenClassificationTrainer(
+            model=model(),
+            label_list=data_module.label_list,
+            eval_splits=["validation", "test"],
+            task_name="ner",
+        )
 
     # Enable automatic logging of metrics, parameters, and models
     mlflow.pytorch.autolog()

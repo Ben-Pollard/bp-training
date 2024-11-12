@@ -1,3 +1,4 @@
+from weakref import proxy
 from pytorch_lightning.callbacks import ModelCheckpoint
 
 
