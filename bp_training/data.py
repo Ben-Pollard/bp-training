@@ -1,20 +1,20 @@
 import os
-import pytorch_lightning as pl
-from datasets import load_dataset, DatasetDict
-from transformers import AutoTokenizer
-from torch.utils.data import DataLoader
-from transformers import DataCollatorForTokenClassification
 
+from datasets import load_dataset
+from datasets.dataset_dict import DatasetDict
+from pytorch_lightning import LightningDataModule
+from torch.utils.data import DataLoader
+from transformers import AutoTokenizer, DataCollatorForTokenClassification
 
 os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
 
 
-class NERData(pl.LightningDataModule):
+class NERData(LightningDataModule):
     def __init__(self) -> None:
         super().__init__()
         dataset = load_dataset("wikiann", "en")
-        self.label_list = dataset["train"].features["ner_tags"].feature.names
-        dataset = self.sample(dataset)
+        self.label_list = dataset["train"].features["ner_tags"].feature.names  # type: ignore
+        dataset = self.sample(dataset)  # type: ignore
         dataset = dataset.map(self.tokenise_fn, batched=False)
         dataset = dataset.map(self.align_labels, batched=False)
         dataset = self.postprocess(dataset)
@@ -22,7 +22,7 @@ class NERData(pl.LightningDataModule):
 
     def train_dataloader(self):
         return DataLoader(
-            self.dataset["train"],
+            self.dataset["train"],  # type: ignore
             shuffle=True,
             batch_size=8,
             collate_fn=self.data_collator,
@@ -30,15 +30,14 @@ class NERData(pl.LightningDataModule):
 
     def val_dataloader(self):
         return DataLoader(
-            self.dataset["validation"],
-            shuffle=True,
+            self.dataset["validation"],  # type: ignore
             batch_size=8,
             collate_fn=self.data_collator,
         )
 
     def test_dataloader(self):
         return DataLoader(
-            self.dataset["test"], batch_size=8, collate_fn=self.data_collator
+            self.dataset["test"], batch_size=8, collate_fn=self.data_collator  # type: ignore
         )
 
     @property
@@ -61,7 +60,7 @@ class NERData(pl.LightningDataModule):
     def tokenise_fn(self, data: DatasetDict):
 
         tokenised = self.tokeniser(
-            data["tokens"],
+            data["tokens"],  # type: ignore
             padding="max_length",
             truncation=True,
             is_split_into_words=True,
