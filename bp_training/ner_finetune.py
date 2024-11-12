@@ -1,23 +1,14 @@
-import os
-import pytorch_lightning as pl
-import mlflow
-from transformers import (
-    AdamW,
-    AutoConfig,
-    AutoModelForTokenClassification,
-)
-import evaluate
-from typing import Optional, List
 from collections import defaultdict
-import torch
+from typing import List, Optional
+
+import evaluate
 import numpy as np
-from bp_training.data import NERData
-from dotenv import load_dotenv
-
-load_dotenv()
-pl.seed_everything(42)
+import pytorch_lightning as pl
+import torch
+from transformers import AdamW, AutoConfig, AutoModelForTokenClassification
 
 
+# pylint: disable=unused-argument arguments-differ
 class NERTrainer(pl.LightningModule):
     def __init__(
         self,
@@ -49,34 +40,40 @@ class NERTrainer(pl.LightningModule):
         self.metric = evaluate.load("seqeval")
         self.label_list = label_list
         self.val_outs = defaultdict(list)
+        self.train_outs = defaultdict(list)
 
     def forward(self, **inputs):
         return self.model(**inputs)
 
     def training_step(self, batch, batch_idx):
         outputs = self(**batch)
-        loss = outputs.loss
-        return loss
+        outs = {"loss": outputs.loss}
+        for k, v in outs.items():
+            self.train_outs[k].append(v)
+        return outs
 
     def validation_step(self, batch, batch_idx):
         outputs = self(**batch)
-        val_loss = outputs.loss
-        self.logger.experiment
         outs = {
-            "val_loss": val_loss,
+            "val_loss": outputs.loss,
             "predictions": outputs.logits,
             "labels": batch.labels,
         }
-        for k in outs.keys():
-            self.val_outs[k].append(outs[k])
+        for k, v in outs.items():
+            self.val_outs[k].append(v)
 
         return outs
+
+    def on_train_epoch_end(self) -> None:
+        loss = torch.stack(self.train_outs["loss"]).mean()
+        self.log("loss", loss, prog_bar=True)
+        return super().on_train_epoch_end()
 
     def on_validation_epoch_end(self):
         preds = torch.cat(self.val_outs["predictions"]).detach().cpu().numpy()
         labels = torch.cat(self.val_outs["labels"]).detach().cpu().numpy()
         loss = torch.stack(self.val_outs["val_loss"]).mean()
-        self.log("val_loss", loss, prog_bar=True)
+        self.log("loss", loss, prog_bar=True)
         self.log_dict(
             self.compute_metrics(predictions=preds, labels=labels), prog_bar=True
         )
@@ -111,32 +108,3 @@ class NERTrainer(pl.LightningModule):
             eps=self.hparams.adam_epsilon,
         )
         return optimiser
-
-
-dm = NERData()
-
-model = NERTrainer(
-    model_name_or_path="google-bert/bert-base-cased",
-    num_labels=len(dm.label_list),
-    label_list=dm.label_list,
-    eval_splits=["validation", "test"],
-    task_name="ner",
-)
-
-mlf_logger = pl.loggers.MLFlowLogger(experiment_name="ner", run_name="test")
-
-trainer = pl.Trainer(
-    max_epochs=1, accelerator="auto", devices=1, log_every_n_steps=1, logger=mlf_logger
-)
-
-mlflow.pytorch.autolog()
-
-with mlflow.start_run(log_system_metrics=True, run_name="finetune_test") as run:
-    mlflow_logger = pl.loggers.MLFlowLogger(
-        tracking_uri=os.getenv("MLFLOW_TRACKING_URI"),
-        experiment_name="NER",
-        log_model=False,
-        run_id=run.info.run_id,
-    )
-
-    trainer.fit(model, datamodule=dm)
