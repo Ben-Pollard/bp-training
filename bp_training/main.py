@@ -3,16 +3,18 @@ Entrypoint - currently set up to run a named entity recognition
 data module through a token classification trainer
 """
 
-import os
+from weakref import proxy
 
 import mlflow
-from pytorch_lightning import Trainer, seed_everything, callbacks
+from pytorch_lightning import Trainer, seed_everything
 from pytorch_lightning.loggers import MLFlowLogger
 from dotenv import load_dotenv
+
 
 from bp_training.data import NERData
 from bp_training.transformer_trainers import TokenClassificationTrainer
 from bp_training.model_factory import TokenClassificationModel
+from bp_training.util.tracking import MLFlowNoSaveModelCheckpoint
 
 if __name__ == "__main__":
 
@@ -21,8 +23,10 @@ if __name__ == "__main__":
 
     EXPERIMENT_NAME = "NER Test"
     RUN_NAME = "finetune_test"
+    MLFLOW_TRACKING_URI = "http://localhost:5000"
 
     mlflow.set_experiment(EXPERIMENT_NAME)
+    # mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
 
     # resume_run = "finetune_test"
     # experiment = mlflow.get_experiment_by_name("NER Test")
@@ -46,21 +50,21 @@ if __name__ == "__main__":
     # Enable automatic logging of metrics, parameters, and models
     mlflow.pytorch.autolog()
 
-    # Define checkpoint callback
-    checkpoint_callback = callbacks.ModelCheckpoint(
-        dirpath=os.path.join("checkpoints", EXPERIMENT_NAME, RUN_NAME),
-        filename="{epoch}-{val_loss:.2f}",
-        save_top_k=1,
-        monitor="val_loss",
-        mode="min",
-    )
-
     with mlflow.start_run(log_system_metrics=True, run_name=RUN_NAME) as run:
         mlflow_logger = MLFlowLogger(
-            tracking_uri=os.getenv("MLFLOW_TRACKING_URI"),
             experiment_name="NER",
-            log_model=True,
             run_id=run.info.run_id,
+            run_name=RUN_NAME,
+            # tracking_uri=MLFLOW_TRACKING_URI,
+            artifact_location="mlartifacts",
+            log_model=True,
+            synchronous=True,
+        )
+
+        checkpoint_callback = MLFlowNoSaveModelCheckpoint(
+            save_top_k=1,
+            monitor="val_loss",
+            mode="min",
         )
 
         trainer = Trainer(
