@@ -18,6 +18,8 @@ if __name__ == "__main__":
     load_dotenv()
     seed_everything(42)
 
+    mlflow.set_experiment("NER Test")
+
     data_module = NERData()
 
     model = TokenClassificationTrainer(
@@ -34,7 +36,7 @@ if __name__ == "__main__":
         mlflow_logger = MLFlowLogger(
             tracking_uri=os.getenv("MLFLOW_TRACKING_URI"),
             experiment_name="NER",
-            log_model=False,
+            log_model=True,
             run_id=run.info.run_id,
         )
 

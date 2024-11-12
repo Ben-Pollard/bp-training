@@ -136,7 +136,7 @@ class TokenClassificationTrainer(pl.LightningModule):
         preds = torch.cat(self.val_outs["predictions"]).detach().cpu().numpy()
         labels = torch.cat(self.val_outs["labels"]).detach().cpu().numpy()
         loss = torch.stack(self.val_outs["val_loss"]).mean()
-        self.log("loss", loss, prog_bar=True)
+        self.log("val_loss", loss, prog_bar=True)
         metrics = self.compute_metrics(predictions=preds, labels=labels)
         self.val_outs.clear()
         if metrics:
