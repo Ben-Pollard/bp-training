@@ -14,5 +14,6 @@
     "python.testing.unittestEnabled": false,
     "[python]": {
     "editor.defaultFormatter": "ms-python.black-formatter"
-  }
+},
+"python.analysis.typeCheckingMode": "basic"
 }

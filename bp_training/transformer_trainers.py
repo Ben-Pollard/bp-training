@@ -1,3 +1,7 @@
+"""
+Pytorch Lightning modules for training transformers
+"""
+
 from collections import defaultdict
 from typing import List, Optional
 
@@ -5,11 +9,17 @@ import evaluate
 import numpy as np
 import pytorch_lightning as pl
 import torch
+from loguru import logger
 from transformers import AdamW, AutoConfig, AutoModelForTokenClassification
+from transformers.tokenization_utils_base import BatchEncoding
 
 
 # pylint: disable=unused-argument arguments-differ
-class NERTrainer(pl.LightningModule):
+class TokenClassificationTrainer(pl.LightningModule):
+    """
+    Pytorch Lightning module for training a transformers model on token classification
+    """
+
     def __init__(  # type: ignore
         self,
         model_name_or_path: str,
@@ -29,13 +39,15 @@ class NERTrainer(pl.LightningModule):
         Initializes the NERTrainer with the given parameters.
 
         Args:
-            model_name_or_path (str): Path to the pre-trained model or model identifier from huggingface.co/models.
+            model_name_or_path (str): Path to the pre-trained model or model identifier
+              from huggingface.co/models.
             num_labels (int): Number of labels for classification.
             label_list (List[str]): List of label names.
             task_name (str): Name of the task.
             learning_rate (float, optional): Learning rate for the optimizer. Defaults to 2e-5.
             adam_epsilon (float, optional): Epsilon for the Adam optimizer. Defaults to 1e-8.
-            warmup_steps (int, optional): Number of warmup steps for learning rate scheduler. Defaults to 0.
+            warmup_steps (int, optional): Number of warmup steps for learning rate scheduler.
+              Defaults to 0.
             weight_decay (float, optional): Weight decay for the optimizer. Defaults to 0.0.
             train_batch_size (int, optional): Batch size for training. Defaults to 32.
             eval_batch_size (int, optional): Batch size for evaluation. Defaults to 32.
@@ -87,7 +99,7 @@ class NERTrainer(pl.LightningModule):
             self.train_outs[k].append(v)
         return outs
 
-    def validation_step(self, batch: dict, batch_idx: int) -> dict:
+    def validation_step(self, batch: BatchEncoding, batch_idx: int) -> dict:
         """
         Performs a single validation step.
 
@@ -125,12 +137,16 @@ class NERTrainer(pl.LightningModule):
         labels = torch.cat(self.val_outs["labels"]).detach().cpu().numpy()
         loss = torch.stack(self.val_outs["val_loss"]).mean()
         self.log("loss", loss, prog_bar=True)
-        self.log_dict(
-            self.compute_metrics(predictions=preds, labels=labels), prog_bar=True
-        )
+        metrics = self.compute_metrics(predictions=preds, labels=labels)
         self.val_outs.clear()
+        if metrics:
+            self.log_dict(metrics, prog_bar=True)
+        else:
+            logger.warning(f"Metrics undefined for epoch {self.current_epoch}")
 
-    def compute_metrics(self, predictions: np.ndarray, labels: np.ndarray) -> dict:
+    def compute_metrics(
+        self, predictions: np.ndarray, labels: np.ndarray
+    ) -> Optional[dict]:
         """
         Computes evaluation metrics.
 
@@ -155,12 +171,15 @@ class NERTrainer(pl.LightningModule):
         results = self.metric.compute(
             predictions=true_predictions, references=true_labels
         )
-        return {
-            "precision": results["overall_precision"],
-            "recall": results["overall_recall"],
-            "f1": results["overall_f1"],
-            "accuracy": results["overall_accuracy"],
-        }
+        if results:
+            return {
+                "precision": results["overall_precision"],
+                "recall": results["overall_recall"],
+                "f1": results["overall_f1"],
+                "accuracy": results["overall_accuracy"],
+            }
+        else:
+            return None
 
     def configure_optimizers(self) -> AdamW:
         """
@@ -171,7 +190,7 @@ class NERTrainer(pl.LightningModule):
         """
         optimiser = AdamW(
             self.parameters(),
-            lr=self.hparams.learning_rate,
-            eps=self.hparams.adam_epsilon,
+            lr=self.hparams["learning_rate"],
+            eps=self.hparams["adam_epsilon"],
         )
         return optimiser

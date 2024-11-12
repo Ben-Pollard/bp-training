@@ -1,3 +1,7 @@
+"""
+Adapters for huggingface datasets for use with Lightning
+"""
+
 import os
 
 from datasets import load_dataset
@@ -11,7 +15,8 @@ os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
 
 class NERData(LightningDataModule):
     """
-    A PyTorch Lightning DataModule for Named Entity Recognition (NER) tasks using the WikiANN dataset.
+    A PyTorch Lightning DataModule for Named Entity Recognition (NER) tasks
+    using the WikiANN dataset.
     """
 
     def __init__(self) -> None:
@@ -31,12 +36,6 @@ class NERData(LightningDataModule):
         """
         Returns the DataLoader for the training dataset.
         """
-        """
-        Returns the DataLoader for the validation dataset.
-        """
-        """
-        Returns the DataLoader for the test dataset.
-        """
         return DataLoader(
             self.dataset["train"],  # type: ignore
             shuffle=True,
@@ -45,6 +44,9 @@ class NERData(LightningDataModule):
         )
 
     def val_dataloader(self):
+        """
+        Returns the DataLoader for the validation dataset.
+        """
         return DataLoader(
             self.dataset["validation"],  # type: ignore
             batch_size=8,
@@ -52,6 +54,9 @@ class NERData(LightningDataModule):
         )
 
     def test_dataloader(self):
+        """
+        Returns the DataLoader for the test dataset.
+        """
         return DataLoader(
             self.dataset["test"], batch_size=8, collate_fn=self.data_collator  # type: ignore
         )
@@ -89,7 +94,6 @@ class NERData(LightningDataModule):
         )
 
     def tokenise_fn(self, data: DatasetDict):
-
         """
         Tokenizes the input data using the tokenizer.
 
@@ -139,7 +143,8 @@ class NERData(LightningDataModule):
 
     def postprocess(self, data: DatasetDict) -> DatasetDict:
         """
-        Post-processes the dataset by removing unnecessary columns and setting the format to PyTorch.
+        Post-processes the dataset by removing unnecessary columns
+          and setting the format to PyTorch.
 
         Args:
             data (DatasetDict): The dataset to post-process.
