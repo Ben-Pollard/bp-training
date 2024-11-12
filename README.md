@@ -1,9 +1,8 @@
 ## To do
-- evaluation
 - lora (torchtune?)
-- experiment management (mlflow?)
 - workflow (metaflow?)
-
+- lr scheduling
+- freezing
 
 # Running
 `mlflow ui`

@@ -5,6 +5,10 @@ lightning_logs/
 
 mlruns/
 ml-runs/
+mlartifacts/
 
 0/
 .aider*
+
+
+*.ckpt
