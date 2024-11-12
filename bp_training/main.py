@@ -6,7 +6,8 @@ data module through a token classification trainer
 import os
 
 import mlflow
-from pytorch_lightning import Trainer, seed_everything
+import git
+from pytorch_lightning import Trainer, seed_everything, callbacks
 from pytorch_lightning.loggers import MLFlowLogger
 from dotenv import load_dotenv
 
@@ -30,7 +31,22 @@ if __name__ == "__main__":
         task_name="ner",
     )
 
+    # Log the current git hash
+    repo = git.Repo(search_parent_directories=True)
+    sha = repo.head.object.hexsha
+    mlflow.log_param("git_hash", sha)
+
+    # Enable automatic logging of metrics, parameters, and models
     mlflow.pytorch.autolog()
+
+    # Define checkpoint callback
+    checkpoint_callback = callbacks.ModelCheckpoint(
+        dirpath="checkpoints",
+        filename="{epoch}-{val_loss:.2f}",
+        save_top_k=1,
+        monitor="val_loss",
+        mode="min",
+    )
 
     with mlflow.start_run(log_system_metrics=True, run_name="finetune_test") as run:
         mlflow_logger = MLFlowLogger(
@@ -41,6 +57,7 @@ if __name__ == "__main__":
         )
 
         trainer = Trainer(
+            callbacks=[checkpoint_callback],
             max_epochs=2,
             accelerator="auto",
             devices=1,

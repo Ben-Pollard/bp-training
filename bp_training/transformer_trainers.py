@@ -10,7 +10,8 @@ import numpy as np
 import pytorch_lightning as pl
 import torch
 from loguru import logger
-from transformers import AdamW, AutoConfig, AutoModelForTokenClassification
+from transformers import AdamW
+from bp_training.model import TokenClassificationModel
 from transformers.tokenization_utils_base import BatchEncoding
 
 
@@ -57,14 +58,8 @@ class TokenClassificationTrainer(pl.LightningModule):
 
         self.save_hyperparameters()
 
-        self.config = AutoConfig.from_pretrained(
-            model_name_or_path,
-            num_labels=num_labels,
-            problem_type="multi_label_classification",
-        )
-        self.model = AutoModelForTokenClassification.from_pretrained(
-            model_name_or_path, config=self.config
-        )
+        self.model_class = TokenClassificationModel(model_name_or_path, num_labels)
+        self.model = self.model_class.get_model()
         self.metric = evaluate.load("seqeval")
         self.label_list = label_list
         self.val_outs = defaultdict(list)
