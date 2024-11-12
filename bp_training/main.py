@@ -15,7 +15,6 @@ from dotenv import load_dotenv
 
 from bp_training.data import NERData
 from bp_training.transformer_trainers import TokenClassificationTrainer
-from bp_training.model_factory import TokenClassificationModel
 from bp_training.util.tracking import MLFlowNoSaveModelCheckpoint
 
 if __name__ == "__main__":
@@ -51,13 +50,8 @@ if __name__ == "__main__":
         lightning_module = TokenClassificationTrainer.load_from_checkpoint(checkpoint)
     else:
 
-        model = TokenClassificationModel(
-            model_name_or_path="google-bert/bert-base-cased",
-            num_labels=len(data_module.label_list),
-        )
-
         lightning_module = TokenClassificationTrainer(
-            model=model(),
+            model_name_or_path="google-bert/bert-base-cased",
             label_list=data_module.label_list,
             eval_splits=["validation", "test"],
             task_name="ner",
