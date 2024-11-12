@@ -10,7 +10,14 @@ os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
 
 
 class NERData(LightningDataModule):
+    """
+    A PyTorch Lightning DataModule for Named Entity Recognition (NER) tasks using the WikiANN dataset.
+    """
+
     def __init__(self) -> None:
+        """
+        Initializes the NERData module by loading and processing the WikiANN dataset.
+        """
         super().__init__()
         dataset = load_dataset("wikiann", "en")
         self.label_list = dataset["train"].features["ner_tags"].feature.names  # type: ignore
@@ -21,6 +28,15 @@ class NERData(LightningDataModule):
         self.dataset = dataset
 
     def train_dataloader(self):
+        """
+        Returns the DataLoader for the training dataset.
+        """
+        """
+        Returns the DataLoader for the validation dataset.
+        """
+        """
+        Returns the DataLoader for the test dataset.
+        """
         return DataLoader(
             self.dataset["train"],  # type: ignore
             shuffle=True,
@@ -42,13 +58,28 @@ class NERData(LightningDataModule):
 
     @property
     def tokeniser(self):
+        """
+        Returns the tokenizer for token classification tasks.
+        """
         return AutoTokenizer.from_pretrained("google-bert/bert-base-cased")
 
     @property
     def data_collator(self):
+        """
+        Returns the data collator for token classification tasks.
+        """
         return DataCollatorForTokenClassification(tokenizer=self.tokeniser)
 
     def sample(self, data: DatasetDict) -> DatasetDict:
+        """
+        Samples a subset of the dataset for training, validation, and testing.
+
+        Args:
+            data (DatasetDict): The original dataset.
+
+        Returns:
+            DatasetDict: A sampled subset of the dataset.
+        """
         return DatasetDict(
             {
                 "train": data["train"].shuffle().select(range(8)),
@@ -59,6 +90,15 @@ class NERData(LightningDataModule):
 
     def tokenise_fn(self, data: DatasetDict):
 
+        """
+        Tokenizes the input data using the tokenizer.
+
+        Args:
+            data (DatasetDict): The input data to tokenize.
+
+        Returns:
+            dict: The tokenized data.
+        """
         tokenised = self.tokeniser(
             data["tokens"],  # type: ignore
             padding="max_length",
@@ -71,6 +111,15 @@ class NERData(LightningDataModule):
         return tokenised.data
 
     def align_labels(self, example):
+        """
+        Aligns the labels with the tokenized inputs.
+
+        Args:
+            example (dict): A single example containing 'ner_tags' and 'word_ids'.
+
+        Returns:
+            dict: The example with aligned labels.
+        """
         label = example["ner_tags"]
         label_ids = []
         previous_word_idx = None
@@ -89,6 +138,15 @@ class NERData(LightningDataModule):
         return example
 
     def postprocess(self, data: DatasetDict) -> DatasetDict:
+        """
+        Post-processes the dataset by removing unnecessary columns and setting the format to PyTorch.
+
+        Args:
+            data (DatasetDict): The dataset to post-process.
+
+        Returns:
+            DatasetDict: The post-processed dataset.
+        """
         data = data.remove_columns(["tokens", "ner_tags", "langs", "spans", "word_ids"])
         data.set_format("torch")
         return data
