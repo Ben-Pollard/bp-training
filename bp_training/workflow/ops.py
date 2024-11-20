@@ -4,7 +4,7 @@ from dagster import op, Config
 from bp_training.data import NERData
 from bp_training.util.model_io import get_latest_artifact_path
 from bp_training.transformer_trainers import TokenClassificationTrainer
-from bp_training.trainer import configure_trainer, TrainingConfig
+from bp_training.workflow.config import configure_trainer, TrainingConfig
 
 load_dotenv()
 
