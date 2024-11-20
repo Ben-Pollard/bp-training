@@ -19,5 +19,5 @@ def test_training_job():
     run_config = RunConfig(job_config | training_config)
 
     instance = DagsterInstance.ephemeral()
-    result = training_job.execute_in_process(run_config=config, instance=instance)
+    result = training_job.execute_in_process(run_config=run_config, instance=instance)
     assert result.success
