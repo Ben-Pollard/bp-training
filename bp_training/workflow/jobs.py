@@ -11,7 +11,15 @@ class JobConfig(Config):
 
 
 @job
-def training_job(job_config: JobConfig, training_config: TrainingConfig):
+def training_job():
+    job_config = JobConfig(resume=False)
+    training_config = TrainingConfig(
+        experiment_name="NER Test",
+        run_id="test_run_id",
+        run_name="test_run",
+        artifact_location="mlartifacts",
+        max_epochs=2,
+    )
     data_module = ops.load_data_op()
     model = ops.get_model(job_config.resume, data_module)
     trained_model = ops.train_model(model, data_module, training_config)
