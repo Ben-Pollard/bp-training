@@ -8,6 +8,6 @@ from bp_training.workflow import ops
 @job
 def training_job():
     data_module = ops.load_data_op()
-    model = ops.get_model_op(data_module=data_module)
+    model = ops.get_model_op(data_module)
     trained_model = ops.train_model_op(model, data_module)
     # log_model_asset(trained_model)
