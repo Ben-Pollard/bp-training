@@ -38,8 +38,8 @@ def get_model_from_hf_hub(data_module):
     return lightning_module
 
 
-@op
-def get_model(resume, data_module):
+@op(ins={"resume": In(bool)})
+def get_model(resume: bool, data_module):
     if resume:
         yield get_model_from_checkpoint()
     else:
