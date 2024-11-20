@@ -1,8 +1,6 @@
 import os
 from dotenv import load_dotenv
-from dagster import op, asset, Output
-from pytorch_lightning import Trainer
-from mlflow.pytorch import log_model
+from dagster import op, Config
 from bp_training.data import NERData
 from bp_training.util.model_io import get_latest_artifact_path
 from bp_training.transformer_trainers import TokenClassificationTrainer
@@ -11,8 +9,12 @@ from bp_training.trainer import configure_trainer, TrainingConfig
 load_dotenv()
 
 
-# 1. Define an op to initialize and load data using your LightningDataModule
-@op
+class LoadDataConfig(Config):
+    # Define any configuration parameters needed for loading data
+    pass
+
+
+@op(config_schema=LoadDataConfig)
 def load_data_op():
     data_module = NERData()
     return data_module
@@ -38,17 +40,29 @@ def get_model_from_hf_hub(data_module):
     return lightning_module
 
 
-@op(ins={"resume": In(bool)})
-def get_model(resume: bool, data_module):
+class GetModelConfig(Config):
+    resume: bool
+
+
+@op(config_schema=GetModelConfig)
+def get_model_op(context, data_module):
+    resume = context.op_config["resume"]
     if resume:
         yield get_model_from_checkpoint()
     else:
         yield get_model_from_hf_hub(data_module)
 
 
-# 2. Define an op for the training step, taking in the data module and model
-@op
-def train_model(model, data_module, config: TrainingConfig):
-    trainer = configure_trainer(config)
+class TrainModelConfig(Config):
+    experiment_name: str
+    run_id: str
+    run_name: str
+    artifact_location: str
+    max_epochs: int
+
+
+@op(config_schema=TrainModelConfig)
+def train_model_op(context, model, data_module):
+    trainer = configure_trainer(context.op_config)
     trainer.fit(model, data_module)
     return model
