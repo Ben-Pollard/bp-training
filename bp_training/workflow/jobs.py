@@ -1,4 +1,4 @@
-from dagster import job, Config, In
+from dagster import job, Config, In, op
 from bp_training.workflow import ops
 
 # from bp_training.workflow import assets
@@ -9,6 +9,10 @@ from bp_training.trainer import TrainingConfig
 class JobConfig(Config):
     resume: bool
 
+
+@op
+def provide_resume() -> bool:
+    return False
 
 @job
 def training_job():
@@ -21,6 +25,7 @@ def training_job():
         max_epochs=2,
     )
     data_module = ops.load_data_op()
-    model = ops.get_model(resume=job_config.resume, data_module=data_module)
+    resume = provide_resume()
+    model = ops.get_model(resume=resume, data_module=data_module)
     trained_model = ops.train_model(model, data_module, training_config)
     # log_model_asset(trained_model)
