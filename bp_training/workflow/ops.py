@@ -1,20 +1,16 @@
 import os
 from dotenv import load_dotenv
-from dagster import op, Config
+from dagster import op
 from bp_training.data import NERData
 from bp_training.util.model_io import get_latest_artifact_path
 from bp_training.transformer_trainers import TokenClassificationTrainer
 from bp_training.workflow.config import configure_trainer
+from bp_training.workflow.config import LoadDataConfig, GetModelConfig, TrainModelConfig
 
 load_dotenv()
 
 
-class LoadDataConfig(Config):
-    # Define any configuration parameters needed for loading data
-    pass
-
-
-@op(config_schema=LoadDataConfig)
+@op
 def load_data_op():
     data_module = NERData()
     return data_module
@@ -40,29 +36,17 @@ def get_model_from_hf_hub(data_module):
     return lightning_module
 
 
-class GetModelConfig(Config):
-    resume: bool
-
-
-@op(config_schema=GetModelConfig)
-def get_model_op(context, data_module):
-    resume = context.op_config["resume"]
+@op
+def get_model_op(config: GetModelConfig, data_module):
+    resume = config.resume
     if resume:
-        yield get_model_from_checkpoint()
+        return get_model_from_checkpoint()
     else:
-        yield get_model_from_hf_hub(data_module)
+        return get_model_from_hf_hub(data_module)
 
 
-class TrainModelConfig(Config):
-    experiment_name: str
-    run_id: str
-    run_name: str
-    artifact_location: str
-    max_epochs: int
-
-
-@op(config_schema=TrainModelConfig)
-def train_model_op(context, model, data_module):
-    trainer = configure_trainer(context.op_config)
+@op
+def train_model_op(config: TrainModelConfig, model, data_module):
+    trainer = configure_trainer(config)
     trainer.fit(model, data_module)
-    return model
+    return trainer.model
