@@ -19,31 +19,3 @@ class TrainModelConfig(Config):
     run_name: str
     artifact_location: str
     max_epochs: int
-
-
-def configure_trainer(config: TrainModelConfig) -> Trainer:
-    mlflow_logger = MLFlowLogger(
-        experiment_name=config.experiment_name,
-        run_id=config.run_id,
-        run_name=config.run_name,
-        artifact_location=config.artifact_location,
-        log_model=True,
-        synchronous=True,
-    )
-
-    checkpoint_callback = MLFlowNoSaveModelCheckpoint(
-        save_top_k=1,
-        monitor="val_loss",
-        mode="min",
-    )
-
-    trainer = Trainer(
-        callbacks=[checkpoint_callback],
-        max_epochs=config.max_epochs,
-        accelerator="auto",
-        devices=1,
-        log_every_n_steps=1,
-        logger=mlflow_logger,
-    )
-
-    return trainer

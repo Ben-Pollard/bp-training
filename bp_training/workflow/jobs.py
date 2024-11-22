@@ -1,11 +1,11 @@
-from dagster import job, Config, In, op
+from dagster import job
+from dagster_mlflow import end_mlflow_on_run_finished, mlflow_tracking
 from bp_training.workflow import ops
 
-# from bp_training.workflow import assets
-# from bp_training.workflow import definitions
 
-
-@job
+# pylint: disable=no-value-for-parameter
+@end_mlflow_on_run_finished
+@job(resource_defs={"mlflow": mlflow_tracking})
 def training_job():
     # data should be materialised. currently using hf cache
     data_module = ops.load_data_op()

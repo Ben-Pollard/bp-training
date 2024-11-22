@@ -1,9 +1,17 @@
-from dagster import execute_job, DagsterInstance, RunConfig
+from dagster import DagsterInstance, RunConfig
+import dagster_mlflow.hooks
+import dagster_mlflow.resources
 from bp_training.workflow.jobs import training_job
-from bp_training.workflow.config import LoadDataConfig, GetModelConfig, TrainModelConfig
+from bp_training.workflow.config import GetModelConfig, TrainModelConfig
+import dagster_mlflow
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 
 def test_training_job():
+
     get_model_config = GetModelConfig(resume=False)
 
     training_config = TrainModelConfig(
@@ -18,7 +26,16 @@ def test_training_job():
         ops={
             "get_model_op": get_model_config,
             "train_model_op": training_config,
-        }
+        },
+        resources={
+            "mlflow": {
+                "config": {
+                    "experiment_name": "dagster",
+                    "mlflow_tracking_uri": os.environ["MLFLOW_TRACKING_URI"],
+                    # "mlflow_run_id": "dagster_run",
+                }
+            }
+        },
     )
 
     instance = DagsterInstance.ephemeral()

@@ -9,18 +9,6 @@
       "purpose": ["debug-test"],
       "console": "integratedTerminal",
       "justMyCode": false,
-    },
-    {
-      "name": "Python:Streamlit",
-      "type": "debugpy",
-      "request": "launch",
-      "module": "streamlit",
-      "args": [
-          "run",
-          "${file}",
-          "--server.port",
-          "2000"
-      ]
-  }
+    }
   ]
 }
